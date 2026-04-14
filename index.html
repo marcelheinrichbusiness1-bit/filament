@@ -397,12 +397,13 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ─────────────────────────────────────────────
-// HIER EINTRAGEN:
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxX9s8FWLVlct_KqLLa_aX_gYK0Yk2FikXun7A6HA1J744zSGZ0eN2JLCl2EVdKfllmgg/exec';
-// ─────────────────────────────────────────────
+const GITHUB_TOKEN = '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';
+const GITHUB_REPO = 'marcelheinrichbusiness1-bit/filament';
+const DATA_FILE = 'data.json';
+const API_BASE = `https://api.github.com/repos/${GITHUB_REPO}/contents/${DATA_FILE}`;
 
 let spools = [];
+let fileSha = null;
 let busy = false;
 
 function loading(on) {
@@ -418,23 +419,38 @@ function toast(msg, isError = false) {
   setTimeout(() => t.className = 'toast', 2500);
 }
 
-async function apiFetch(options = {}) {
-  if (options.method === 'POST') {
-    const res = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify(options.body),
-    });
-    return res.text();
-  } else {
-    const res = await fetch(SCRIPT_URL);
-    return res.json();
-  }
+async function ghGet() {
+  const res = await fetch(API_BASE, {
+    headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json' }
+  });
+  if (res.status === 404) { fileSha = null; return []; }
+  const json = await res.json();
+  fileSha = json.sha;
+  const content = decodeURIComponent(escape(atob(json.content.replace(/\n/g, ''))));
+  return JSON.parse(content);
+}
+
+async function ghPut(data) {
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+  const body = { message: 'update spools', content };
+  if (fileSha) body.sha = fileSha;
+  const res = await fetch(API_BASE, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `token ${GITHUB_TOKEN}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  const json = await res.json();
+  fileSha = json.content?.sha;
 }
 
 async function loadSpools() {
   loading(true);
   try {
-    spools = await apiFetch();
+    spools = await ghGet();
     if (!Array.isArray(spools)) spools = [];
   } catch(e) {
     toast('Verbindung fehlgeschlagen', true);
@@ -459,8 +475,10 @@ async function addSpool() {
   loading(true);
 
   try {
-    await apiFetch({ method: 'POST', body: { action: 'add', spool } });
-    spools.push(spool);
+    const current = await ghGet();
+    current.push(spool);
+    await ghPut(current);
+    spools = current;
     document.getElementById('weight').value = '';
     if (isCustom()) document.getElementById('color-name-custom').value = '';
     render(); updateFilters();
@@ -481,8 +499,10 @@ async function deleteSpool(id) {
   loading(true);
 
   try {
-    await apiFetch({ method: 'POST', body: { action: 'delete', spool: { id } } });
-    spools = spools.filter(s => String(s.id) !== String(id));
+    const current = await ghGet();
+    const updated = current.filter(s => String(s.id) !== String(id));
+    await ghPut(updated);
+    spools = updated;
     render(); updateFilters();
     toast('Spule entfernt');
   } catch(e) {
