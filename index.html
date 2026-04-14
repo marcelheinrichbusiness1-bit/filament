@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Filament Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e0e;
+    --bg2: #161616;
+    --bg3: #1e1e1e;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.14);
+    --gold: #c9a96e;
+    --gold2: #e8c97a;
+    --text: #f0ece4;
+    --muted: #888880;
+    --muted2: #5a5a55;
+    --radius: 12px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(201,169,110,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(201,169,110,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 3rem 2rem 4rem;
+  }
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 3rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-area h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 3rem;
+    font-weight: 300;
+    line-height: 1;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .logo-area h1 span { color: var(--gold); }
+  .logo-area p {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+  .stats { display: flex; gap: 2rem; align-items: flex-end; }
+  .stat { text-align: right; }
+  .stat-val {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem;
+    font-weight: 300;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+  .add-section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .form-title {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1.25rem;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1.8fr 1.2fr 1.6fr auto;
+    gap: 12px;
+    align-items: end;
+  }
+  .field label {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 7px;
+  }
+  select, input[type="text"], input[type="number"] {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 300;
+    padding: 0 12px;
+    height: 40px;
+    outline: none;
+    transition: border-color 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23888880' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+    cursor: pointer;
+  }
+  select:hover, input:hover { border-color: var(--border2); }
+  select:focus, input:focus { border-color: rgba(201,169,110,0.5); }
+  input[type="color"] {
+    width: 40px; height: 40px;
+    padding: 3px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .color-row { display: flex; gap: 8px; align-items: center; }
+  .color-row select { flex: 1; min-width: 0; }
+  .color-swatch-preview {
+    width: 36px; height: 40px; flex-shrink: 0;
+    border-radius: 8px;
+    border: 1px solid var(--border2);
+    transition: background 0.2s;
+  }
+  .custom-color-row { margin-top: 8px; display: none; }
+  .custom-color-row .inner { display: flex; gap: 8px; align-items: center; }
+  .custom-color-row input[type="text"] { flex: 1; min-width: 0; }
+  .weight-inner { display: flex; gap: 8px; }
+  .weight-inner input { flex: 1; min-width: 0; }
+  .weight-inner select { width: 68px; flex-shrink: 0; }
+  .add-btn {
+    height: 40px;
+    padding: 0 20px;
+    background: var(--gold);
+    color: #0e0e0e;
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s, transform 0.1s, opacity 0.2s;
+  }
+  .add-btn:hover { background: var(--gold2); }
+  .add-btn:active { transform: scale(0.97); }
+  .add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .filters { display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .filters select { width: auto; min-width: 150px; font-size: 12px; height: 36px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+  }
+  .empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 4rem 1rem;
+    color: var(--muted2);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+  }
+  .empty span {
+    display: block;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.5rem;
+    font-weight: 300;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .spool-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.1rem;
+    position: relative;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .spool-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+  .card-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .color-circle {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.1);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .spool-hole { width: 14px; height: 14px; border-radius: 50%; }
+  .card-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: var(--text);
+    line-height: 1.1;
+  }
+  .card-hex { font-size: 10px; color: var(--muted2); margin-top: 2px; letter-spacing: 0.05em; }
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .type-pill {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 100px;
+    background: rgba(201,169,110,0.1);
+    color: var(--gold);
+    border: 1px solid rgba(201,169,110,0.2);
+  }
+  .weight-info { text-align: right; }
+  .weight-num { font-size: 14px; font-weight: 400; color: var(--text); }
+  .weight-sub { font-size: 10px; color: var(--muted2); margin-top: 1px; letter-spacing: 0.06em; }
+  .del-btn {
+    position: absolute; top: 8px; right: 8px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted2);
+    font-size: 14px; line-height: 1;
+    cursor: pointer;
+    display: none; align-items: center; justify-content: center;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .spool-card:hover .del-btn { display: flex; }
+  .del-btn:hover { background: rgba(200,50,50,0.15); color: #e06060; border-color: rgba(200,50,50,0.3); }
+
+  /* Loading overlay */
+  .loading-bar {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--gold);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+    z-index: 999;
+  }
+  .loading-bar.active { transform: scaleX(0.7); }
+  .loading-bar.done { transform: scaleX(1); transition: transform 0.1s, opacity 0.3s 0.1s; opacity: 0; }
+
+  .toast {
+    position: fixed; bottom: 2rem; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--gold); color: #0e0e0e;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px; padding: 10px 20px;
+    border-radius: 100px;
+    transition: transform 0.3s cubic-bezier(.34,1.56,.64,1);
+    z-index: 100; white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.error { background: #c0392b; color: #fff; }
+
+  @media(max-width: 700px) {
+    .form-grid { grid-template-columns: 1fr 1fr; }
+    .add-btn { grid-column: span 2; }
+    header { flex-direction: column; align-items: flex-start; gap: 1.5rem; }
+    .stats { gap: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="loading-bar" id="loading-bar"></div>
+<div class="container">
+  <header>
+    <div class="logo-area">
+      <h1>Fila<span>ment</span></h1>
+      <p>Sortiment &amp; Bestand</p>
+    </div>
+    <div class="stats" id="stats"></div>
+  </header>
+
+  <div class="add-section">
+    <p class="form-title">Neue Spule hinzufügen</p>
+    <div class="form-grid">
+      <div class="field">
+        <label>Material</label>
+        <select id="type">
+          <option>PLA</option>
+          <option>PLA+</option>
+          <option>PETG</option>
+          <option>PETG-CF</option>
+          <option>ABS</option>
+          <option>ASA</option>
+          <option>TPU</option>
+          <option>Nylon</option>
+          <option>PA-CF</option>
+          <option>Resin</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Farbe</label>
+        <div class="color-row">
+          <div class="color-swatch-preview" id="swatch-preview"></div>
+          <select id="color-preset" onchange="onPresetChange()">
+            <option value="Schwarz"    data-hex="#111111">Schwarz</option>
+            <option value="Anthrazit"  data-hex="#3a3a3a">Anthrazit</option>
+            <option value="Grau"       data-hex="#888888">Grau</option>
+            <option value="Hellgrau"   data-hex="#cccccc">Hellgrau</option>
+            <option value="Weiß"       data-hex="#f5f5f5">Weiß</option>
+            <option value="Beige"      data-hex="#d4c4a0">Beige</option>
+            <option value="Elfenbein"  data-hex="#fffff0">Elfenbein</option>
+            <option value="Braun"      data-hex="#7b4f2e">Braun</option>
+            <option value="Gold"       data-hex="#c9a96e">Gold</option>
+            <option value="Silber"     data-hex="#c0c0c0">Silber</option>
+            <option value="Bronze"     data-hex="#a0784a">Bronze</option>
+            <option value="Kupfer"     data-hex="#b5651d">Kupfer</option>
+            <option value="Rot"        data-hex="#cc2200">Rot</option>
+            <option value="Dunkelrot"  data-hex="#7a1010">Dunkelrot</option>
+            <option value="Orange"     data-hex="#e05c2a">Orange</option>
+            <option value="Gelb"       data-hex="#e6c200">Gelb</option>
+            <option value="Grün"       data-hex="#2e7d32">Grün</option>
+            <option value="Hellgrün"   data-hex="#66bb6a">Hellgrün</option>
+            <option value="Blau"       data-hex="#1565c0">Blau</option>
+            <option value="Hellblau"   data-hex="#42a5f5">Hellblau</option>
+            <option value="Dunkelblau" data-hex="#0d2b6b">Dunkelblau</option>
+            <option value="Lila"       data-hex="#7b1fa2">Lila</option>
+            <option value="Pink"       data-hex="#e91e8c">Pink</option>
+            <option value="Türkis"     data-hex="#009688">Türkis</option>
+            <option value="__custom__" data-hex="" data-custom="1">— Eigene Farbe —</option>
+          </select>
+        </div>
+        <div class="custom-color-row" id="custom-color-row">
+          <div class="inner">
+            <input type="color" id="color-pick" value="#e05c2a" oninput="onPickerChange()">
+            <input type="text" id="color-name-custom" placeholder="Eigener Name (optional)">
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Gewicht</label>
+        <div class="weight-inner">
+          <input type="number" id="weight" placeholder="1000" min="1" step="1">
+          <select id="unit">
+            <option value="g">g</option>
+            <option value="kg">kg</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Gemessen</label>
+        <select id="with-spool">
+          <option value="net">Netto — ohne Spule</option>
+          <option value="gross">Brutto — mit Spule</option>
+        </select>
+      </div>
+      <button class="add-btn" id="add-btn" onclick="addSpool()">+ Spule</button>
+    </div>
+  </div>
+
+  <div class="filters">
+    <select id="filter-type" onchange="render()"></select>
+    <select id="filter-color" onchange="render()"></select>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────
+// HIER EINTRAGEN:
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxX9s8FWLVlct_KqLLa_aX_gYK0Yk2FikXun7A6HA1J744zSGZ0eN2JLCl2EVdKfllmgg/exec';
+// ─────────────────────────────────────────────
+
+let spools = [];
+let busy = false;
+
+function loading(on) {
+  const bar = document.getElementById('loading-bar');
+  if (on) { bar.className = 'loading-bar active'; }
+  else { bar.className = 'loading-bar done'; setTimeout(() => bar.className = 'loading-bar', 400); }
+}
+
+function toast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => t.className = 'toast', 2500);
+}
+
+async function apiFetch(options = {}) {
+  if (options.method === 'POST') {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify(options.body),
+    });
+    return res.text();
+  } else {
+    const res = await fetch(SCRIPT_URL);
+    return res.json();
+  }
+}
+
+async function loadSpools() {
+  loading(true);
+  try {
+    spools = await apiFetch();
+    if (!Array.isArray(spools)) spools = [];
+  } catch(e) {
+    toast('Verbindung fehlgeschlagen', true);
+    spools = [];
+  }
+  loading(false);
+  render(); updateFilters();
+}
+
+async function addSpool() {
+  if (busy) return;
+  const { hex: colorHex, name: colorName } = getColorData();
+  const type = document.getElementById('type').value;
+  const w = parseFloat(document.getElementById('weight').value);
+  const unit = document.getElementById('unit').value;
+  const ws = document.getElementById('with-spool').value;
+  if (!w || w <= 0) { document.getElementById('weight').focus(); return; }
+
+  const spool = { id: Date.now(), type, colorHex, colorName, weight: w, unit, withSpool: ws };
+  busy = true;
+  document.getElementById('add-btn').disabled = true;
+  loading(true);
+
+  try {
+    await apiFetch({ method: 'POST', body: { action: 'add', spool } });
+    spools.push(spool);
+    document.getElementById('weight').value = '';
+    if (isCustom()) document.getElementById('color-name-custom').value = '';
+    render(); updateFilters();
+    toast('Spule gespeichert');
+  } catch(e) {
+    toast('Fehler beim Speichern', true);
+  }
+
+  loading(false);
+  busy = false;
+  document.getElementById('add-btn').disabled = false;
+}
+
+async function deleteSpool(id) {
+  if (busy) return;
+  if (!confirm('Spule entfernen?')) return;
+  busy = true;
+  loading(true);
+
+  try {
+    await apiFetch({ method: 'POST', body: { action: 'delete', spool: { id } } });
+    spools = spools.filter(s => String(s.id) !== String(id));
+    render(); updateFilters();
+    toast('Spule entfernt');
+  } catch(e) {
+    toast('Fehler beim Löschen', true);
+  }
+
+  loading(false);
+  busy = false;
+}
+
+function getSelectedPreset() {
+  const sel = document.getElementById('color-preset');
+  return sel.options[sel.selectedIndex];
+}
+function isCustom() { return !!getSelectedPreset().dataset.custom; }
+
+function onPresetChange() {
+  const opt = getSelectedPreset();
+  const row = document.getElementById('custom-color-row');
+  if (opt.dataset.custom) {
+    row.style.display = 'block';
+    updateSwatch(document.getElementById('color-pick').value);
+  } else {
+    row.style.display = 'none';
+    updateSwatch(opt.dataset.hex);
+  }
+}
+
+function onPickerChange() { updateSwatch(document.getElementById('color-pick').value); }
+function updateSwatch(hex) { document.getElementById('swatch-preview').style.background = hex || '#444'; }
+
+function getColorData() {
+  if (isCustom()) {
+    const hex = document.getElementById('color-pick').value;
+    const name = document.getElementById('color-name-custom').value.trim() || hex;
+    return { hex, name };
+  }
+  const opt = getSelectedPreset();
+  return { hex: opt.dataset.hex, name: opt.value };
+}
+
+function isHexDark(hex) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return (r*299 + g*587 + b*114) / 1000 < 128;
+}
+
+function updateFilters() {
+  const ft = document.getElementById('filter-type');
+  const fc = document.getElementById('filter-color');
+  const ct = ft.value, cc = fc.value;
+  const types = [...new Set(spools.map(s => s.type))].sort();
+  const colors = [...new Set(spools.map(s => s.colorName))].sort();
+  ft.innerHTML = '<option value="">Alle Materialien</option>' + types.map(t => `<option value="${t}"${t===ct?'selected':''}>${t}</option>`).join('');
+  fc.innerHTML = '<option value="">Alle Farben</option>' + colors.map(c => `<option value="${c}"${c===cc?'selected':''}>${c}</option>`).join('');
+}
+
+function render() {
+  const ft = document.getElementById('filter-type').value;
+  const fc = document.getElementById('filter-color').value;
+  const list = spools.filter(s => (!ft || s.type === ft) && (!fc || s.colorName === fc));
+  const grid = document.getElementById('grid');
+
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty"><span>Leer</span>Noch keine Spulen vorhanden</div>`;
+  } else {
+    grid.innerHTML = list.map(s => {
+      const g = s.unit === 'kg' ? s.weight * 1000 : Number(s.weight);
+      const label = g >= 1000 ? (g/1000).toFixed(2) + ' kg' : g + ' g';
+      const note = s.withSpool === 'gross' ? 'inkl. Spule' : 'ohne Spule';
+      const dark = isHexDark(s.colorHex);
+      return `<div class="spool-card">
+        <button class="del-btn" onclick="deleteSpool(${s.id})">×</button>
+        <div class="card-top">
+          <div class="color-circle" style="background:${s.colorHex}">
+            <div class="spool-hole" style="background:${dark?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.25)'}"></div>
+          </div>
+          <div>
+            <div class="card-name">${s.colorName}</div>
+            <div class="card-hex">${s.colorHex}</div>
+          </div>
+        </div>
+        <div class="card-footer">
+          <span class="type-pill">${s.type}</span>
+          <div class="weight-info">
+            <div class="weight-num">${label}</div>
+            <div class="weight-sub">${note}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  const total = spools.length;
+  const types = new Set(spools.map(s => s.type)).size;
+  const grams = spools.reduce((a, s) => a + (s.unit === 'kg' ? s.weight * 1000 : Number(s.weight)), 0);
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="stat-val">${total}</div><div class="stat-label">Spulen</div></div>
+    <div class="stat"><div class="stat-val">${types}</div><div class="stat-label">Materialien</div></div>
+    <div class="stat"><div class="stat-val">${(grams/1000).toFixed(2)}</div><div class="stat-label">kg gesamt</div></div>`;
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Enter') addSpool(); });
+onPresetChange();
+loadSpools();
+</script>
+</body>
+</html>
